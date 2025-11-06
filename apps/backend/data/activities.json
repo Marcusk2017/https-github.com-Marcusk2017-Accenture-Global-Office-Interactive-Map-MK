@@ -1,0 +1,12 @@
+[
+  {
+    "officeId": "london-primary",
+    "title": "Skills to Succeed",
+    "date": "2024-06-01",
+    "description": "Trained 500+ youth in digital skills.",
+    "impactMetrics": { "volunteerHours": 2000, "peopleHelped": 500 },
+    "partners": ["Local NGO"],
+    "category": "Education"
+  }
+]
+

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "nyc-primary",
+    "name": "New York (Manhattan West)",
+    "type": "Primary",
+    "regionId": "north-america",
+    "coordinates": { "lat": 40.7536, "lng": -73.9982 },
+    "address": {
+      "line1": "1 Manhattan West",
+      "city": "New York",
+      "country": "USA"
+    },
+    "contact": {
+      "phone": "+1 212-555-0147",
+      "email": "ny-office@example.com"
+    },
+    "photos": [],
+    "pocs": [],
+    "clients": [],
+    "citizenshipActivities": [],
+    "metadata": { "employees": 1200, "established": 2019, "sqft": 250000 }
+  },
+  {
+    "id": "london-primary",
+    "name": "London (Fenchurch)",
+    "type": "Primary",
+    "regionId": "europe",
+    "coordinates": { "lat": 51.5111, "lng": -0.0819 },
+    "address": {
+      "line1": "30 Fenchurch St",
+      "city": "London",
+      "country": "UK"
+    },
+    "contact": {
+      "phone": "+44 20 7946 0958",
+      "email": "ldn-office@example.com"
+    },
+    "photos": [],
+    "pocs": [],
+    "clients": [],
+    "citizenshipActivities": [],
+    "metadata": { "employees": 1500, "established": 2017, "sqft": 300000 }
+  },
+  {
+    "id": "tokyo-primary",
+    "name": "Tokyo (Akasaka)",
+    "type": "Primary",
+    "regionId": "asia-pacific",
+    "coordinates": { "lat": 35.6728, "lng": 139.7366 },
+    "address": {
+      "line1": "Akasaka 1-1-1",
+      "city": "Tokyo",
+      "country": "Japan"
+    },
+    "contact": {
+      "phone": "+81 3-1234-5678",
+      "email": "tokyo-office@example.com"
+    },
+    "photos": [],
+    "pocs": [],
+    "clients": [],
+    "citizenshipActivities": [],
+    "metadata": { "employees": 900, "established": 2015, "sqft": 180000 }
+  }
+]
+

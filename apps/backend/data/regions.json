@@ -1,0 +1,6 @@
+[
+  { "id": "north-america", "name": "North America", "coordinates": { "lat": 39.3813, "lng": -97.9222 }, "description": "US and Canada" },
+  { "id": "europe", "name": "Europe", "coordinates": { "lat": 54.5260, "lng": 15.2551 }, "description": "European region" },
+  { "id": "asia-pacific", "name": "Asia Pacific", "coordinates": { "lat": -25.2744, "lng": 133.7751 }, "description": "APAC region" }
+]
+
