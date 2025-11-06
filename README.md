@@ -79,6 +79,3 @@ apps/
 - Advanced filters and accessibility polish
 - AI chatbot integration via `/api/chat` and UI button
 - Headless CMS integration (Contentful/Strapi/Sanity) replacing JSON files
-
-
-"# Accenture-Global-Office-Interactive-Map-MVP" 
