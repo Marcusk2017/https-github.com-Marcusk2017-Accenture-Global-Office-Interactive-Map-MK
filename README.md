@@ -81,3 +81,4 @@ apps/
 - Headless CMS integration (Contentful/Strapi/Sanity) replacing JSON files
 
 
+"# Accenture-Global-Office-Interactive-Map-MVP" 
