@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { MapView } from './components/MapView';
 import { OfficePanel } from './components/OfficePanel';
+import { LiveFeedModal } from './components/LiveFeedModal';
 import { useAppStore } from './store/useAppStore';
 import { AdminLite } from './components/AdminLite';
 
 export function App() {
   const selectedOffice = useAppStore((s) => s.selectedOffice);
   const setOffices = useAppStore((s) => s.setOffices);
+  const darkMode = useAppStore((s) => s.darkMode);
+  const toggleDarkMode = useAppStore((s) => s.toggleDarkMode);
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark-mode', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     fetch('/api/offices')
@@ -36,7 +43,17 @@ export function App() {
           />
           <button type="submit">Search</button>
         </form>
-        <AdminLite />
+        <div className="header-actions">
+          <button 
+            className="dark-mode-toggle" 
+            onClick={toggleDarkMode}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+          <AdminLite />
+        </div>
       </header>
       <main className="layout">
         <div className="map-area">
@@ -48,6 +65,7 @@ export function App() {
           </aside>
         )}
       </main>
+      <LiveFeedModal />
     </div>
   );
 }

@@ -18,7 +18,8 @@
     "pocs": [],
     "clients": [],
     "citizenshipActivities": [],
-    "metadata": { "employees": 1200, "established": 2019, "sqft": 250000 }
+    "metadata": { "employees": 1200, "established": 2019, "sqft": 250000 },
+    "cameraUrl": "http://username:password@192.168.1.100:88/video.cgi"
   },
   {
     "id": "london-primary",
@@ -39,7 +40,8 @@
     "pocs": [],
     "clients": [],
     "citizenshipActivities": [],
-    "metadata": { "employees": 1500, "established": 2017, "sqft": 300000 }
+    "metadata": { "employees": 1500, "established": 2017, "sqft": 300000 },
+    "cameraUrl": "http://username:password@192.168.1.101:88/video.cgi"
   },
   {
     "id": "tokyo-primary",

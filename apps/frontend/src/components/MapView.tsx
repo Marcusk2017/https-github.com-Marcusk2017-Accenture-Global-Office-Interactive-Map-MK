@@ -5,20 +5,21 @@ import { useAppStore } from '@/store/useAppStore';
 const ACCENTURE_PURPLE = '#A100FF';
 const ACCENTURE_PURPLE_HOVER = '#B333FF';
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibWFyY3VzLWtuaWdodG9uIiwiYSI6ImNtaGNnMnB3YTBveW0ya29hdGRsdzJobTkifQ.uDXcTedLbJOFJcFfPxIYNA';
 
 export function MapView() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const offices = useAppStore((s) => s.offices);
   const selectOffice = useAppStore((s) => s.selectOffice);
+  const darkMode = useAppStore((s) => s.darkMode);
 
-  // initialize map
+  // initialize map (only once)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: darkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
       center: [0, 20],
       zoom: 1.3,
       projection: 'globe'
@@ -28,50 +29,119 @@ export function MapView() {
 
     map.on('style.load', () => {
       map.setFog({});
+      map.resize(); // Ensure map is properly sized on initial load
     });
 
+    // Handle window resize
+    const handleResize = () => {
+      map.resize();
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Handle container resize (for responsive layout changes)
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+    });
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
     return () => {
+      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // render markers
+  // Update map style when dark mode changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setStyle(darkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11');
+    map.once('style.load', () => {
+      map.setFog({});
+    });
+  }, [darkMode]);
+
+  // render markers with Mapbox interactions
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear existing markers stored on map instance
-    (map as any)._customMarkers?.forEach((m: mapboxgl.Marker) => m.remove());
-    (map as any)._customMarkers = [];
+    // Wait for map to be ready
+    if (!map.loaded()) {
+      map.once('load', () => {
+        setupMarkersAndInteractions();
+      });
+    } else {
+      setupMarkersAndInteractions();
+    }
 
-    offices.forEach((office) => {
-      const isPrimary = office.type === 'Primary';
-      const size = isPrimary ? 40 : 24;
+    function setupMarkersAndInteractions() {
+      // Clear existing markers and popups
+      (map as any)._customMarkers?.forEach((m: mapboxgl.Marker) => m.remove());
+      (map as any)._customMarkers = [];
+      (map as any)._customPopups?.forEach((p: mapboxgl.Popup) => p.remove());
+      (map as any)._customPopups = [];
 
-      const el = document.createElement('div');
-      el.style.width = `${size}px`;
-      el.style.height = `${size}px`;
-      el.style.cursor = 'pointer';
-      el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE);
+      offices.forEach((office) => {
+        const isPrimary = office.type === 'Primary';
+        const size = isPrimary ? 40 : 24;
 
-      el.onmouseenter = () => {
-        el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE_HOVER, 1.1);
-      };
-      el.onmouseleave = () => {
-        el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE, 1);
-      };
-      el.onclick = () => {
-        selectOffice(office);
-        map.flyTo({ center: [office.coordinates.lng, office.coordinates.lat], zoom: 10, duration: 1200 });
-      };
+        const el = document.createElement('div');
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        el.style.cursor = 'pointer';
+        el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE);
 
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat([office.coordinates.lng, office.coordinates.lat])
-        .addTo(map);
+        // Mouse enter interaction
+        el.onmouseenter = () => {
+          el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE_HOVER, 1.1);
+          map.getCanvas().style.cursor = 'pointer';
+        };
 
-      (map as any)._customMarkers.push(marker);
-    });
+        // Mouse leave interaction
+        el.onmouseleave = () => {
+          el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE, 1);
+          map.getCanvas().style.cursor = '';
+        };
+
+        // Click interaction with popup
+        el.onclick = () => {
+          selectOffice(office);
+          map.flyTo({ center: [office.coordinates.lng, office.coordinates.lat], zoom: 10, duration: 1200 });
+
+          // Create popup with office information
+          const popup = new mapboxgl.Popup({ offset: [0, -15], closeOnClick: true })
+            .setLngLat([office.coordinates.lng, office.coordinates.lat])
+            .setHTML(`
+              <div class="map-popup">
+                <h3>${office.name}</h3>
+                <p><strong>Type:</strong> ${office.type}</p>
+                ${office.address?.city ? `<p><strong>Location:</strong> ${office.address.city}, ${office.address.country || ''}</p>` : ''}
+                ${office.address?.line1 ? `<p><strong>Address:</strong> ${office.address.line1}</p>` : ''}
+                ${office.metadata?.employees ? `<p><strong>Employees:</strong> ${office.metadata.employees}</p>` : ''}
+              </div>
+            `)
+            .addTo(map);
+
+          if (!(map as any)._customPopups) {
+            (map as any)._customPopups = [];
+          }
+          (map as any)._customPopups.push(popup);
+        };
+
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([office.coordinates.lng, office.coordinates.lat])
+          .addTo(map);
+
+        if (!(map as any)._customMarkers) {
+          (map as any)._customMarkers = [];
+        }
+        (map as any)._customMarkers.push(marker);
+      });
+    }
   }, [offices, selectOffice]);
 
   return <div ref={containerRef} className="map-container" role="region" aria-label="World map" />;

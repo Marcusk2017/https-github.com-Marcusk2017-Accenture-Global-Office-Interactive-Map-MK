@@ -5,6 +5,7 @@ import { useAppStore } from '@/store/useAppStore';
 export function OfficePanel() {
   const office = useAppStore((s) => s.selectedOffice);
   const selectOffice = useAppStore((s) => s.selectOffice);
+  const openLiveFeed = useAppStore((s) => s.openLiveFeed);
 
   return (
     <AnimatePresence>
@@ -47,6 +48,15 @@ export function OfficePanel() {
                 <div className="value">{office.metadata?.sqft ?? '—'}</div>
               </div>
             </div>
+            {office.cameraUrl && (
+              <button
+                className="live-feed-button"
+                onClick={() => openLiveFeed(office)}
+                aria-label="View live camera feed"
+              >
+                📹 View Live Feed
+              </button>
+            )}
           </div>
         </motion.div>
       )}

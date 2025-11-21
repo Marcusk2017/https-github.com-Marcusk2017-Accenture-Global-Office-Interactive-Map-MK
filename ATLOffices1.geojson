@@ -1,0 +1,62 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -84.38939 , 33.77767
+                ]
+            },
+            "type": "Feature",
+            "properties": {
+                "description": "Atlanta 75th, Corporate Office Suite 900",
+                "marker-symbol": "rail-metro",
+                "title": "Cenergy Midtown Office",
+                "url": "" ,
+                "lines": [
+                    "Green"
+                ],
+                "address": "75th Street, Atlanta, GA 30308"
+            }
+        },
+        {
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -84.46847,33.83188
+                ]
+            },
+            "type": "Feature",
+            "properties": {
+                "description": "Accenture Song",
+                "marker-symbol": "rail-metro",
+                "title": "Accenture Song",
+                "url": "" ,
+                "lines": [
+                    "Orange"
+                ],
+                "address": "2971 Olympic Industr Dr SE, Atlanta, GA 30339"
+            }
+        },
+        {
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -84.37897, 33.85201
+                ]
+            },
+            "type": "Feature",
+            "properties": {
+                "description": "Client Delivery Center Uber and Pintrist",
+                "marker-symbol": "rail-metro",
+                "title": "Peidmont Office ",
+                "url": "http://www.wmata.com/rider_tools/pids/showpid.cfm?station_id=79",
+                "lines": [
+                    "Green"
+                ],
+                "address": "3565 Piedmont Road NE, Atlanta, GA 30305 Building 3,4, and 6"
+            }
+        }
+    ]
+}

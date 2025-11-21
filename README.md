@@ -73,6 +73,19 @@ apps/
 - The admin endpoints persist to JSON files under `apps/backend/data`. This is for demo/MVP only.
 - The frontend proxies `/api` to the backend during `vite` dev via `vite.config.ts`.
 
+## Foscam Live Feed Integration
+
+The application supports live camera feeds from Foscam cameras. To configure:
+
+1. **Add camera URL to office data**: Include a `cameraUrl` field in the office JSON object
+2. **Supported formats**:
+   - HTTP stream: `http://username:password@ip:port/video.cgi`
+   - RTSP stream: `rtsp://username:password@ip:port/video.h264` (requires backend conversion to HLS/WebRTC)
+3. **Security**: For production, proxy camera streams through your backend to avoid exposing credentials
+4. **Usage**: Click the "📹 View Live Feed" button in the office panel to view the camera feed
+
+**Note**: RTSP streams require server-side conversion to HLS or WebRTC for browser compatibility. HTTP streams work directly.
+
 ## Next Phases (scaffolding-ready)
 
 - Secondary pins, galleries, POCs, clients, citizenship timelines
