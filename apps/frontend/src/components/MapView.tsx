@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore, Office } from '../store/useAppStore';
 
 const ACCENTURE_PURPLE = '#A100FF';
 const ACCENTURE_PURPLE_HOVER = '#B333FF';
@@ -10,9 +10,9 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibWFyY3Vz
 export function MapView() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const offices = useAppStore((s) => s.offices);
-  const selectOffice = useAppStore((s) => s.selectOffice);
-  const darkMode = useAppStore((s) => s.darkMode);
+  const offices = useAppStore((s: { offices: Office[] }) => s.offices);
+  const selectOffice = useAppStore((s: { selectOffice: (office: Office | null) => void }) => s.selectOffice);
+  const darkMode = useAppStore((s: { darkMode: boolean }) => s.darkMode);
 
   // initialize map (only once)
   useEffect(() => {
@@ -79,13 +79,15 @@ export function MapView() {
     }
 
     function setupMarkersAndInteractions() {
+      if (!map) return;
+      
       // Clear existing markers and popups
       (map as any)._customMarkers?.forEach((m: mapboxgl.Marker) => m.remove());
       (map as any)._customMarkers = [];
       (map as any)._customPopups?.forEach((p: mapboxgl.Popup) => p.remove());
       (map as any)._customPopups = [];
 
-      offices.forEach((office) => {
+      offices.forEach((office: Office) => {
         const isPrimary = office.type === 'Primary';
         const size = isPrimary ? 40 : 24;
 
@@ -98,48 +100,52 @@ export function MapView() {
         // Mouse enter interaction
         el.onmouseenter = () => {
           el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE_HOVER, 1.1);
-          map.getCanvas().style.cursor = 'pointer';
+          if (map) map.getCanvas().style.cursor = 'pointer';
         };
 
         // Mouse leave interaction
         el.onmouseleave = () => {
           el.innerHTML = getPinSvg(size, ACCENTURE_PURPLE, 1);
-          map.getCanvas().style.cursor = '';
+          if (map) map.getCanvas().style.cursor = '';
         };
 
         // Click interaction with popup
         el.onclick = () => {
           selectOffice(office);
-          map.flyTo({ center: [office.coordinates.lng, office.coordinates.lat], zoom: 10, duration: 1200 });
+          if (map) {
+            map.flyTo({ center: [office.coordinates.lng, office.coordinates.lat], zoom: 10, duration: 1200 });
 
-          // Create popup with office information
-          const popup = new mapboxgl.Popup({ offset: [0, -15], closeOnClick: true })
-            .setLngLat([office.coordinates.lng, office.coordinates.lat])
-            .setHTML(`
-              <div class="map-popup">
-                <h3>${office.name}</h3>
-                <p><strong>Type:</strong> ${office.type}</p>
-                ${office.address?.city ? `<p><strong>Location:</strong> ${office.address.city}, ${office.address.country || ''}</p>` : ''}
-                ${office.address?.line1 ? `<p><strong>Address:</strong> ${office.address.line1}</p>` : ''}
-                ${office.metadata?.employees ? `<p><strong>Employees:</strong> ${office.metadata.employees}</p>` : ''}
-              </div>
-            `)
-            .addTo(map);
+            // Create popup with office information
+            const popup = new mapboxgl.Popup({ offset: [0, -15], closeOnClick: true })
+              .setLngLat([office.coordinates.lng, office.coordinates.lat])
+              .setHTML(`
+                <div class="map-popup">
+                  <h3>${office.name}</h3>
+                  <p><strong>Type:</strong> ${office.type}</p>
+                  ${office.address?.city ? `<p><strong>Location:</strong> ${office.address.city}, ${office.address.country || ''}</p>` : ''}
+                  ${office.address?.line1 ? `<p><strong>Address:</strong> ${office.address.line1}</p>` : ''}
+                  ${office.metadata?.employees ? `<p><strong>Employees:</strong> ${office.metadata.employees}</p>` : ''}
+                </div>
+              `)
+              .addTo(map);
 
-          if (!(map as any)._customPopups) {
-            (map as any)._customPopups = [];
+            if (!(map as any)._customPopups) {
+              (map as any)._customPopups = [];
+            }
+            (map as any)._customPopups.push(popup);
           }
-          (map as any)._customPopups.push(popup);
         };
 
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([office.coordinates.lng, office.coordinates.lat])
-          .addTo(map);
+        if (map) {
+          const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([office.coordinates.lng, office.coordinates.lat])
+            .addTo(map);
 
-        if (!(map as any)._customMarkers) {
-          (map as any)._customMarkers = [];
+          if (!(map as any)._customMarkers) {
+            (map as any)._customMarkers = [];
+          }
+          (map as any)._customMarkers.push(marker);
         }
-        (map as any)._customMarkers.push(marker);
       });
     }
   }, [offices, selectOffice]);

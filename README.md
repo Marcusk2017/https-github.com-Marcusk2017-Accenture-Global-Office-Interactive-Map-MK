@@ -92,3 +92,5 @@ The application supports live camera feeds from Foscam cameras. To configure:
 - Advanced filters and accessibility polish
 - AI chatbot integration via `/api/chat` and UI button
 - Headless CMS integration (Contentful/Strapi/Sanity) replacing JSON files
+"# Accenture-Global-Office-Interactive-Map-" 
+"# Accenture-Global-Office-Interactive-Map-" 
