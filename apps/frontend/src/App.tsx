@@ -2,19 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { MapView } from './components/MapView';
 import { OfficePanel } from './components/OfficePanel';
 import { LiveFeedModal } from './components/LiveFeedModal';
+import { WelcomeSplash } from './components/WelcomeSplash';
 import { useAppStore } from './store/useAppStore';
 import { AdminLite } from './components/AdminLite';
 
 export function App() {
   const selectedOffice = useAppStore((s) => s.selectedOffice);
   const setOffices = useAppStore((s) => s.setOffices);
-  const darkMode = useAppStore((s) => s.darkMode);
-  const toggleDarkMode = useAppStore((s) => s.toggleDarkMode);
   const [query, setQuery] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Always enable dark mode
   useEffect(() => {
-    document.documentElement.classList.toggle('dark-mode', darkMode);
-  }, [darkMode]);
+    document.documentElement.classList.add('dark-mode');
+  }, []);
 
   useEffect(() => {
     fetch('/api/offices')
@@ -30,8 +31,19 @@ export function App() {
     setOffices(data);
   };
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
   return (
-    <div className="app-root">
+    <div className={`app-root ${isFullscreen ? 'fullscreen-mode' : ''}`}>
+      <WelcomeSplash />
       <header className="app-header">
         <div className="brand">Accenture Global Office Map</div>
         <form className="search" onSubmit={onSearch}>
@@ -45,12 +57,12 @@ export function App() {
         </form>
         <div className="header-actions">
           <button 
-            className="dark-mode-toggle" 
-            onClick={toggleDarkMode}
-            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="fullscreen-toggle" 
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
-            {darkMode ? '☀️' : '🌙'}
+            {isFullscreen ? '⛶' : '⛶'}
           </button>
           <AdminLite />
         </div>

@@ -12,14 +12,13 @@ export function MapView() {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const offices = useAppStore((s: { offices: Office[] }) => s.offices);
   const selectOffice = useAppStore((s: { selectOffice: (office: Office | null) => void }) => s.selectOffice);
-  const darkMode = useAppStore((s: { darkMode: boolean }) => s.darkMode);
 
   // initialize map (only once)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: darkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/marcus-knighton/cmhnwgx3v004y01ql0uk9fl5q',
       center: [0, 20],
       zoom: 1.3,
       projection: 'globe'
@@ -30,6 +29,77 @@ export function MapView() {
     map.on('style.load', () => {
       map.setFog({});
       map.resize(); // Ensure map is properly sized on initial load
+    });
+
+    // Auto-rotate globe slowly
+    let userInteracting = false;
+    let rotationInterval: number | null = null;
+    let resetTimeout: number | null = null;
+    const originalCenter = { lng: 0, lat: 20 }; // Store original position
+
+    const rotateCamera = (timestamp: number) => {
+      if (!userInteracting && map) {
+        const center = map.getCenter();
+        center.lng += 0.03; // Rotate 0.03 degrees per frame (slower, smoother rotation)
+        map.setCenter(center);
+      }
+      rotationInterval = requestAnimationFrame(rotateCamera);
+    };
+
+    // Start rotation after map loads
+    map.on('load', () => {
+      rotationInterval = requestAnimationFrame(rotateCamera);
+    });
+
+    // Function to reset and resume rotation
+    const resetAndResume = () => {
+      if (map) {
+        console.log('Resetting globe to original position...');
+        
+        // Smoothly fly back to original position
+        map.flyTo({ 
+          center: [originalCenter.lng, originalCenter.lat], 
+          zoom: 1.3,
+          duration: 2000, // 2 second animation back to center
+          essential: true
+        });
+        
+        // Resume rotation after flying back
+        setTimeout(() => {
+          userInteracting = false;
+          console.log('Rotation resumed');
+        }, 2100); // Wait for flyTo animation to complete
+      }
+    };
+
+    // Pause rotation when user interacts
+    map.on('mousedown', () => { 
+      userInteracting = true;
+      if (resetTimeout) clearTimeout(resetTimeout);
+      console.log('User started interacting');
+    });
+    map.on('touchstart', () => { 
+      userInteracting = true;
+      if (resetTimeout) clearTimeout(resetTimeout);
+      console.log('User started interacting (touch)');
+    });
+    
+    // Also stop when user is dragging
+    map.on('drag', () => {
+      userInteracting = true;
+      if (resetTimeout) clearTimeout(resetTimeout);
+    });
+    
+    // Schedule reset after user stops interacting
+    map.on('mouseup', () => { 
+      if (resetTimeout) clearTimeout(resetTimeout);
+      console.log('User stopped interacting, will reset in 7 seconds...');
+      resetTimeout = window.setTimeout(resetAndResume, 7000); // Reset after 7 seconds
+    });
+    map.on('touchend', () => { 
+      if (resetTimeout) clearTimeout(resetTimeout);
+      console.log('User stopped interacting (touch), will reset in 7 seconds...');
+      resetTimeout = window.setTimeout(resetAndResume, 7000); // Reset after 7 seconds
     });
 
     // Handle window resize
@@ -49,20 +119,17 @@ export function MapView() {
     return () => {
       window.removeEventListener('resize', handleResize);
       resizeObserver.disconnect();
+      if (rotationInterval !== null) {
+        cancelAnimationFrame(rotationInterval);
+      }
+      if (resetTimeout !== null) {
+        clearTimeout(resetTimeout);
+      }
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // Update map style when dark mode changes
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    map.setStyle(darkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11');
-    map.once('style.load', () => {
-      map.setFog({});
-    });
-  }, [darkMode]);
 
   // render markers with Mapbox interactions
   useEffect(() => {

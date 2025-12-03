@@ -14,22 +14,18 @@ export type Office = {
 type AppState = {
   offices: Office[];
   selectedOffice: Office | null;
-  darkMode: boolean;
   liveFeedOffice: Office | null;
   setOffices: (o: Office[]) => void;
   selectOffice: (o: Office | null) => void;
-  toggleDarkMode: () => void;
   openLiveFeed: (office: Office | null) => void;
 };
 
 export const useAppStore = create<AppState>((set) => ({
   offices: [],
   selectedOffice: null,
-  darkMode: false,
   liveFeedOffice: null,
   setOffices: (offices) => set({ offices }),
   selectOffice: (selectedOffice) => set({ selectedOffice }),
-  toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   openLiveFeed: (office) => set({ liveFeedOffice: office })
 }));
 
