@@ -19,23 +19,121 @@ export function MapView() {
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: 'mapbox://styles/marcus-knighton/cmhnwgx3v004y01ql0uk9fl5q',
-      center: [0, 20],
+      center: [-95, 40], // North America (centered on USA)
       zoom: 1.3,
       projection: 'globe'
     });
 
     mapRef.current = map;
 
+    // Add zoom and navigation controls
+    map.addControl(new mapboxgl.NavigationControl({
+      showCompass: true,
+      showZoom: true,
+      visualizePitch: true
+    }), 'top-right');
+
     map.on('style.load', () => {
       map.setFog({});
       map.resize(); // Ensure map is properly sized on initial load
+
+      // Make Mapbox Studio points clickable
+      // This will work for any point layers in your custom style
+      map.on('click', (e) => {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: map.getStyle().layers
+            .filter(layer => layer.type === 'symbol' || layer.type === 'circle')
+            .map(layer => layer.id)
+        });
+
+        if (features.length > 0) {
+          const feature = features[0];
+          const coordinates = feature.geometry.type === 'Point' 
+            ? feature.geometry.coordinates.slice() 
+            : e.lngLat.toArray();
+          
+          // Get properties from the feature
+          const properties = feature.properties || {};
+          
+          // Create popup content
+          let popupContent = '<div style="padding: 8px;">';
+          
+          // Check if it has a title or name property
+          if (properties.title || properties.name) {
+            popupContent += `<h3 style="margin: 0 0 8px 0; color: #A100FF;">${properties.title || properties.name}</h3>`;
+          }
+          
+          // Add other properties
+          Object.keys(properties).forEach(key => {
+            if (key !== 'title' && key !== 'name') {
+              popupContent += `<p style="margin: 4px 0;"><strong>${key}:</strong> ${properties[key]}</p>`;
+            }
+          });
+          
+          popupContent += '</div>';
+
+          // Ensure popup coordinates are in correct format
+          const [lng, lat] = coordinates;
+
+          // Close existing popup if any
+          if (currentPopup) {
+            currentPopup.remove();
+          }
+
+          // Create and display popup
+          currentPopup = new mapboxgl.Popup({ 
+            closeButton: true,
+            closeOnClick: true,
+            offset: 25
+          })
+            .setLngLat([lng, lat])
+            .setHTML(popupContent)
+            .addTo(map);
+
+          // Clear popup reference when it's closed by user
+          currentPopup.on('close', () => {
+            currentPopup = null;
+          });
+
+          // Zoom to the clicked point
+          map.flyTo({
+            center: [lng, lat],
+            zoom: 8,
+            duration: 1500,
+            essential: true
+          });
+
+          // Pause rotation when interacting with points
+          userInteracting = true;
+          if (resetTimeout) clearTimeout(resetTimeout);
+          resetTimeout = window.setTimeout(resetAndResume, 7000);
+        }
+      });
+
+      // Change cursor on hover over clickable features
+      map.on('mouseenter', (e) => {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: map.getStyle().layers
+            .filter(layer => layer.type === 'symbol' || layer.type === 'circle')
+            .map(layer => layer.id)
+        });
+        
+        if (features.length > 0) {
+          map.getCanvas().style.cursor = 'pointer';
+        }
+      });
+
+      map.on('mouseleave', () => {
+        map.getCanvas().style.cursor = '';
+      });
     });
 
     // Auto-rotate globe slowly
     let userInteracting = false;
     let rotationInterval: number | null = null;
     let resetTimeout: number | null = null;
-    const originalCenter = { lng: 0, lat: 20 }; // Store original position
+    let currentPopup: mapboxgl.Popup | null = null; // Track current popup
+    const originalCenter = { lng: -95, lat: 40 }; // Store original position (North America)
 
     const rotateCamera = (timestamp: number) => {
       if (!userInteracting && map) {
@@ -55,6 +153,13 @@ export function MapView() {
     const resetAndResume = () => {
       if (map) {
         console.log('Resetting globe to original position...');
+        
+        // Close any open popup
+        if (currentPopup) {
+          currentPopup.remove();
+          currentPopup = null;
+          console.log('Popup closed');
+        }
         
         // Smoothly fly back to original position
         map.flyTo({ 
@@ -88,6 +193,27 @@ export function MapView() {
     map.on('drag', () => {
       userInteracting = true;
       if (resetTimeout) clearTimeout(resetTimeout);
+    });
+
+    // Detect mouse wheel zoom
+    map.on('wheel', () => {
+      userInteracting = true;
+      if (resetTimeout) clearTimeout(resetTimeout);
+      console.log('User zooming with wheel');
+    });
+
+    // Detect zoom start (pinch zoom, double-click zoom, etc.)
+    map.on('zoomstart', () => {
+      userInteracting = true;
+      if (resetTimeout) clearTimeout(resetTimeout);
+      console.log('Zoom started');
+    });
+
+    // Detect zoom end and schedule reset
+    map.on('zoomend', () => {
+      if (resetTimeout) clearTimeout(resetTimeout);
+      console.log('Zoom ended, will reset in 7 seconds...');
+      resetTimeout = window.setTimeout(resetAndResume, 7000);
     });
     
     // Schedule reset after user stops interacting
