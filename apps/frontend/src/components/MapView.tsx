@@ -33,12 +33,76 @@ export function MapView() {
       visualizePitch: true
     }), 'top-right');
 
+    // Add custom Home button control
+    class HomeControl {
+      private _map?: mapboxgl.Map;
+      private _container?: HTMLElement;
+      
+      onAdd(map: mapboxgl.Map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+        
+        const button = document.createElement('button');
+        button.className = 'mapboxgl-ctrl-icon mapboxgl-ctrl-home';
+        button.type = 'button';
+        button.title = 'Reset to global view';
+        button.setAttribute('aria-label', 'Reset to global view');
+        
+        // Home icon using Unicode
+        button.innerHTML = '<span style="font-size: 20px; line-height: 29px;">🏠</span>';
+        
+        button.onclick = () => {
+          console.log('Home button clicked - resetting to global view');
+          
+          // Close any open popup
+          if (currentPopup) {
+            currentPopup.remove();
+            currentPopup = null;
+          }
+          
+          // Reset click tracking
+          lastClickedPoint = null;
+          
+          // Clear any pending reset timeout
+          if (resetTimeout) clearTimeout(resetTimeout);
+          
+          // Fly to global view
+          map.flyTo({
+            center: [rotationView.lng, rotationView.lat],
+            zoom: rotationView.zoom,
+            duration: 2000,
+            essential: true
+          });
+          
+          // Resume rotation after animation
+          setTimeout(() => {
+            userInteracting = false;
+            console.log('Rotation resumed from home button');
+          }, 2100);
+        };
+        
+        this._container.appendChild(button);
+        return this._container;
+      }
+      
+      onRemove() {
+        if (this._container?.parentNode) {
+          this._container.parentNode.removeChild(this._container);
+        }
+        this._map = undefined;
+      }
+    }
+    
+    map.addControl(new HomeControl() as any, 'top-right');
+
     map.on('style.load', () => {
       map.setFog({});
       map.resize(); // Ensure map is properly sized on initial load
 
-      // Make Mapbox Studio points clickable
-      // This will work for any point layers in your custom style
+      // Make Mapbox Studio points clickable with two-stage zoom
+      // First click: Zoom to area showing nearby points
+      // Second click on same point: Zoom closer and show popup
       map.on('click', (e) => {
         const features = map.queryRenderedFeatures(e.point, {
           layers: map.getStyle().layers
@@ -52,61 +116,93 @@ export function MapView() {
             ? feature.geometry.coordinates.slice() 
             : e.lngLat.toArray();
           
-          // Get properties from the feature
-          const properties = feature.properties || {};
-          
-          // Create popup content
-          let popupContent = '<div style="padding: 8px;">';
-          
-          // Check if it has a title or name property
-          if (properties.title || properties.name) {
-            popupContent += `<h3 style="margin: 0 0 8px 0; color: #A100FF;">${properties.title || properties.name}</h3>`;
-          }
-          
-          // Add other properties
-          Object.keys(properties).forEach(key => {
-            if (key !== 'title' && key !== 'name') {
-              popupContent += `<p style="margin: 4px 0;"><strong>${key}:</strong> ${properties[key]}</p>`;
-            }
-          });
-          
-          popupContent += '</div>';
-
-          // Ensure popup coordinates are in correct format
           const [lng, lat] = coordinates;
+          
+          // Check if this is the same point as last clicked
+          const isSamePoint = lastClickedPoint && 
+            Math.abs(lastClickedPoint.lng - lng) < 0.0001 && 
+            Math.abs(lastClickedPoint.lat - lat) < 0.0001;
+          
+          if (isSamePoint) {
+            // SECOND CLICK: Show popup and zoom to building detail view
+            const properties = feature.properties || {};
+            
+            // Create popup content with better styling
+            let popupContent = '<div style="padding: 0; max-width: 280px; word-wrap: break-word;">';
+            
+            // Check if it has a title or name property
+            if (properties.title || properties.name) {
+              popupContent += `<h3 style="margin: 0 0 12px 0; color: #A100FF; font-size: 16px; font-weight: 600; line-height: 1.3;">${properties.title || properties.name}</h3>`;
+            }
+            
+            // Add other properties with better formatting
+            Object.keys(properties).forEach(key => {
+              if (key !== 'title' && key !== 'name') {
+                const value = String(properties[key]);
+                popupContent += `<p style="margin: 6px 0; font-size: 13px; line-height: 1.4; word-break: break-word;"><strong style="color: #B366FF;">${key}:</strong> ${value}</p>`;
+              }
+            });
+            
+            popupContent += '</div>';
 
-          // Close existing popup if any
-          if (currentPopup) {
-            currentPopup.remove();
+            // Close existing popup if any
+            if (currentPopup) {
+              currentPopup.remove();
+            }
+
+            // Create and display popup positioned ABOVE the marker
+            currentPopup = new mapboxgl.Popup({ 
+              closeButton: true,
+              closeOnClick: false,
+              anchor: 'bottom', // Anchors popup to bottom, making it appear above the marker
+              offset: [0, -40], // Offset upward to clear the marker and name
+              maxWidth: '300px',
+              className: 'office-info-popup'
+            })
+              .setLngLat([lng, lat])
+              .setHTML(popupContent)
+              .addTo(map);
+
+            // Clear popup reference when it's closed by user
+            currentPopup.on('close', () => {
+              currentPopup = null;
+              lastClickedPoint = null; // Reset on popup close
+            });
+
+            // Zoom to building detail view
+            map.flyTo({
+              center: [lng, lat],
+              zoom: 17.5, // Very close zoom to see building details clearly
+              duration: 1500,
+              essential: true
+            });
+            
+            console.log('Second click - showing building details');
+          } else {
+            // FIRST CLICK: Zoom to area view showing nearby points
+            lastClickedPoint = { lng, lat };
+            
+            // Close any existing popup
+            if (currentPopup) {
+              currentPopup.remove();
+              currentPopup = null;
+            }
+            
+            // Zoom to area view to see office names and logos clearly
+            map.flyTo({
+              center: [lng, lat],
+              zoom: 11.5, // Close enough to see Accenture logos and office names
+              duration: 1500,
+              essential: true
+            });
+            
+            console.log('First click - zooming to area');
           }
-
-          // Create and display popup
-          currentPopup = new mapboxgl.Popup({ 
-            closeButton: true,
-            closeOnClick: true,
-            offset: 25
-          })
-            .setLngLat([lng, lat])
-            .setHTML(popupContent)
-            .addTo(map);
-
-          // Clear popup reference when it's closed by user
-          currentPopup.on('close', () => {
-            currentPopup = null;
-          });
-
-          // Zoom to the clicked point
-          map.flyTo({
-            center: [lng, lat],
-            zoom: 8,
-            duration: 1500,
-            essential: true
-          });
 
           // Pause rotation when interacting with points
           userInteracting = true;
           if (resetTimeout) clearTimeout(resetTimeout);
-          resetTimeout = window.setTimeout(resetAndResume, 7000);
+          resetTimeout = window.setTimeout(resetAndResume, 15000); // 15 seconds
         }
       });
 
@@ -133,7 +229,8 @@ export function MapView() {
     let rotationInterval: number | null = null;
     let resetTimeout: number | null = null;
     let currentPopup: mapboxgl.Popup | null = null; // Track current popup
-    const originalCenter = { lng: -95, lat: 40 }; // Store original position (North America)
+    let lastClickedPoint: { lng: number; lat: number } | null = null; // Track last clicked point for two-stage zoom
+    const rotationView = { lng: 0, lat: 20, zoom: 1 }; // Zoomed out view for rotation
 
     const rotateCamera = (timestamp: number) => {
       if (!userInteracting && map) {
@@ -146,13 +243,35 @@ export function MapView() {
 
     // Start rotation after map loads
     map.on('load', () => {
+      // Pause rotation during initial transition
+      userInteracting = true;
+      
+      // After a brief display of North America (3 seconds), zoom out to global view
+      setTimeout(() => {
+        if (map) {
+          console.log('Auto-zooming to global rotation view...');
+          map.flyTo({ 
+            center: [rotationView.lng, rotationView.lat], 
+            zoom: rotationView.zoom,
+            duration: 3000, // Smooth 3-second transition to global view
+            essential: true
+          });
+          
+          // Resume rotation after flyTo completes
+          setTimeout(() => {
+            userInteracting = false;
+            console.log('Starting endless rotation from global view...');
+          }, 3100); // Wait for flyTo animation to complete
+        }
+      }, 3000);
+      
       rotationInterval = requestAnimationFrame(rotateCamera);
     });
 
-    // Function to reset and resume rotation
+    // Function to resume rotation after inactivity
     const resetAndResume = () => {
       if (map) {
-        console.log('Resetting globe to original position...');
+        console.log('Resuming rotation...');
         
         // Close any open popup
         if (currentPopup) {
@@ -161,19 +280,23 @@ export function MapView() {
           console.log('Popup closed');
         }
         
-        // Smoothly fly back to original position
+        // Reset click tracking
+        lastClickedPoint = null;
+        
+        // Get current center and zoom out to show full globe
+        const currentCenter = map.getCenter();
         map.flyTo({ 
-          center: [originalCenter.lng, originalCenter.lat], 
-          zoom: 1.3,
-          duration: 2000, // 2 second animation back to center
+          center: [currentCenter.lng, currentCenter.lat], 
+          zoom: rotationView.zoom, // Zoom out to level 1 to show full globe
+          duration: 2000,
           essential: true
         });
         
-        // Resume rotation after flying back
+        // Resume rotation after zoom completes
         setTimeout(() => {
           userInteracting = false;
-          console.log('Rotation resumed');
-        }, 2100); // Wait for flyTo animation to complete
+          console.log('Endless rotation resumed from current position');
+        }, 2100);
       }
     };
 
@@ -212,20 +335,20 @@ export function MapView() {
     // Detect zoom end and schedule reset
     map.on('zoomend', () => {
       if (resetTimeout) clearTimeout(resetTimeout);
-      console.log('Zoom ended, will reset in 7 seconds...');
-      resetTimeout = window.setTimeout(resetAndResume, 7000);
+      console.log('Zoom ended, will reset in 15 seconds...');
+      resetTimeout = window.setTimeout(resetAndResume, 15000); // 15 seconds
     });
     
     // Schedule reset after user stops interacting
     map.on('mouseup', () => { 
       if (resetTimeout) clearTimeout(resetTimeout);
-      console.log('User stopped interacting, will reset in 7 seconds...');
-      resetTimeout = window.setTimeout(resetAndResume, 7000); // Reset after 7 seconds
+      console.log('User stopped interacting, will reset in 15 seconds...');
+      resetTimeout = window.setTimeout(resetAndResume, 15000); // Reset after 15 seconds
     });
     map.on('touchend', () => { 
       if (resetTimeout) clearTimeout(resetTimeout);
-      console.log('User stopped interacting (touch), will reset in 7 seconds...');
-      resetTimeout = window.setTimeout(resetAndResume, 7000); // Reset after 7 seconds
+      console.log('User stopped interacting (touch), will reset in 15 seconds...');
+      resetTimeout = window.setTimeout(resetAndResume, 15000); // Reset after 15 seconds
     });
 
     // Handle window resize
