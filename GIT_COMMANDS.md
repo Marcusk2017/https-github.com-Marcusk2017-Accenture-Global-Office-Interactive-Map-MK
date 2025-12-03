@@ -36,8 +36,10 @@ Examples of good commit messages:
 ### 4. Push to GitHub
 Push your commits to the main branch:
 ```bash
-git push origin main
+git push marcus main
 ```
+
+**Note:** Your repository uses "marcus" as the remote name instead of "origin".
 
 ## Complete Push Workflow (All-in-One)
 
@@ -54,7 +56,7 @@ git add .
 git commit -m "Update globe features and welcome screen"
 
 # Step 4: Push to GitHub
-git push origin main
+git push marcus main
 ```
 
 ## Other Useful Commands
@@ -89,7 +91,7 @@ git restore .
 ### Pull Latest Changes
 Get the latest changes from GitHub:
 ```bash
-git pull origin main
+git pull marcus main
 ```
 
 ### Create a New Branch
@@ -126,8 +128,8 @@ git remote -v
 
 ### If push is rejected:
 ```bash
-git pull origin main --rebase
-git push origin main
+git pull marcus main --rebase
+git push marcus main
 ```
 
 ### If you need to undo the last commit (but keep changes):
@@ -142,8 +144,8 @@ git reset --soft HEAD~1
 | `git status` | Check current status |
 | `git add .` | Stage all changes |
 | `git commit -m "message"` | Commit staged changes |
-| `git push origin main` | Push to GitHub |
-| `git pull origin main` | Pull from GitHub |
+| `git push marcus main` | Push to GitHub |
+| `git pull marcus main` | Pull from GitHub |
 | `git log` | View commit history |
 | `git diff` | View uncommitted changes |
 | `git restore .` | Discard all changes |
