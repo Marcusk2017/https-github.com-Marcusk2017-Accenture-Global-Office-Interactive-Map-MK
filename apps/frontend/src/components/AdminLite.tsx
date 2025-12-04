@@ -1,110 +1,170 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-type FormState = {
-  name: string;
-  type: 'Primary' | 'Secondary';
-  regionId: string;
-  lat: string;
-  lng: string;
-  line1: string;
-  city: string;
-  country: string;
+type Settings = {
+  welcomeFontSize: number;
+  welcomeFontFamily: string;
+  globeZoom: number;
+  markerSize: number;
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  welcomeFontSize: 100, // Percentage
+  welcomeFontFamily: 'Graphik',
+  globeZoom: 1.3,
+  markerSize: 40, // Pixels
 };
 
 export function AdminLite() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<FormState>({
-    name: '',
-    type: 'Primary',
-    regionId: 'north-america',
-    lat: '',
-    lng: '',
-    line1: '',
-    city: '',
-    country: ''
-  });
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [message, setMessage] = useState<string>('');
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage('');
-    const payload = {
-      name: form.name,
-      type: form.type,
-      regionId: form.regionId,
-      coordinates: { lat: Number(form.lat), lng: Number(form.lng) },
-      address: { line1: form.line1, city: form.city, country: form.country }
-    };
-    const res = await fetch('/api/offices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    if (res.ok) {
-      setMessage('Office created. Refresh to load into map.');
-      setForm({ ...form, name: '', lat: '', lng: '', line1: '', city: '', country: '' });
-    } else {
-      setMessage('Failed to create office.');
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('accenture-map-settings');
+    if (saved) {
+      try {
+        setSettings(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load settings', e);
+      }
     }
+  }, []);
+
+  // Apply settings to CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--welcome-font-scale', `${settings.welcomeFontSize / 100}`);
+    root.style.setProperty('--globe-zoom', `${settings.globeZoom}`);
+    root.style.setProperty('--marker-size', `${settings.markerSize}px`);
+    
+    // Update welcome screen font family
+    const welcomeElements = document.querySelectorAll('.welcome-content, .welcome-text, .innovation-center, .touch-prompt');
+    welcomeElements.forEach(el => {
+      (el as HTMLElement).style.fontFamily = `${settings.welcomeFontFamily}, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
+    });
+  }, [settings]);
+
+  const handleSave = () => {
+    localStorage.setItem('accenture-map-settings', JSON.stringify(settings));
+    setMessage('Settings saved! Refresh the page to apply globe and marker size changes.');
+    setTimeout(() => setMessage(''), 4000);
+  };
+
+  const handleReset = () => {
+    setSettings(DEFAULT_SETTINGS);
+    localStorage.removeItem('accenture-map-settings');
+    setMessage('Settings reset to defaults! Refresh the page to fully apply.');
+    setTimeout(() => setMessage(''), 4000);
   };
 
   return (
     <div>
       <button className="admin-toggle" onClick={() => setOpen(!open)} aria-expanded={open}>
-        Admin
+        Settings
       </button>
       {open && (
-        <div className="admin-card" role="region" aria-label="Admin panel">
-          <h3 style={{ marginTop: 0 }}>Add Office (Demo)</h3>
-          <form className="admin-form" onSubmit={onSubmit}>
-            <label>
-              Name
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            </label>
-            <label>
-              Type
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as any })}>
-                <option>Primary</option>
-                <option>Secondary</option>
-              </select>
-            </label>
-            <label>
-              Region
-              <select value={form.regionId} onChange={(e) => setForm({ ...form, regionId: e.target.value })}>
-                <option value="north-america">North America</option>
-                <option value="europe">Europe</option>
-                <option value="asia-pacific">Asia Pacific</option>
-              </select>
-            </label>
-            <div className="row2">
+        <div className="admin-card settings-panel" role="region" aria-label="Settings panel">
+          <h3 style={{ marginTop: 0, color: '#A100FF' }}>Display Settings</h3>
+          
+          <div className="settings-form">
+            {/* Welcome Screen Settings */}
+            <div className="settings-section">
+              <h4>Welcome Screen</h4>
+              
               <label>
-                Latitude
-                <input value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} required />
+                Font Size: {settings.welcomeFontSize}%
+                <input 
+                  type="range" 
+                  min="50" 
+                  max="150" 
+                  value={settings.welcomeFontSize}
+                  onChange={(e) => setSettings({ ...settings, welcomeFontSize: Number(e.target.value) })}
+                  className="slider"
+                />
+                <span className="range-labels">
+                  <span>50%</span>
+                  <span>150%</span>
+                </span>
               </label>
+
               <label>
-                Longitude
-                <input value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} required />
-              </label>
-            </div>
-            <label>
-              Address line 1
-              <input value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} />
-            </label>
-            <div className="row2">
-              <label>
-                City
-                <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-              </label>
-              <label>
-                Country
-                <input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+                Font Family
+                <select 
+                  value={settings.welcomeFontFamily}
+                  onChange={(e) => setSettings({ ...settings, welcomeFontFamily: e.target.value })}
+                >
+                  <option value="Graphik">Graphik</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                </select>
               </label>
             </div>
-            <div className="row2">
-              <button type="submit">Create</button>
-              {message && <div aria-live="polite">{message}</div>}
+
+            {/* Globe Settings */}
+            <div className="settings-section">
+              <h4>Globe View</h4>
+              
+              <label>
+                Initial Zoom Level: {settings.globeZoom.toFixed(1)}
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="3" 
+                  step="0.1"
+                  value={settings.globeZoom}
+                  onChange={(e) => setSettings({ ...settings, globeZoom: Number(e.target.value) })}
+                  className="slider"
+                />
+                <span className="range-labels">
+                  <span>Far (0.5)</span>
+                  <span>Close (3.0)</span>
+                </span>
+              </label>
             </div>
-          </form>
+
+            {/* Marker Settings */}
+            <div className="settings-section">
+              <h4>Office Markers</h4>
+              
+              <label>
+                Marker Size: {settings.markerSize}px
+                <input 
+                  type="range" 
+                  min="20" 
+                  max="80" 
+                  value={settings.markerSize}
+                  onChange={(e) => setSettings({ ...settings, markerSize: Number(e.target.value) })}
+                  className="slider"
+                />
+                <span className="range-labels">
+                  <span>20px</span>
+                  <span>80px</span>
+                </span>
+              </label>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="settings-actions">
+              <button type="button" onClick={handleSave} className="save-btn">
+                Save Settings
+              </button>
+              <button type="button" onClick={handleReset} className="reset-btn">
+                Reset to Defaults
+              </button>
+            </div>
+
+            {message && (
+              <div className="settings-message" aria-live="polite">
+                {message}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
-
-

@@ -16,11 +16,15 @@ export function MapView() {
   // initialize map (only once)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    
+    // Get initial zoom from CSS variable (defaults to 1.3)
+    const initialZoom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--globe-zoom')) || 1.3;
+    
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: 'mapbox://styles/marcus-knighton/cmhnwgx3v004y01ql0uk9fl5q',
       center: [-95, 40], // North America (centered on USA)
-      zoom: 1.3,
+      zoom: initialZoom,
       projection: 'globe'
     });
 
@@ -405,7 +409,10 @@ export function MapView() {
 
       offices.forEach((office: Office) => {
         const isPrimary = office.type === 'Primary';
-        const size = isPrimary ? 40 : 24;
+        
+        // Get marker size from CSS variable (defaults to 40)
+        const markerSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--marker-size')) || 40;
+        const size = isPrimary ? markerSize : Math.round(markerSize * 0.6);
 
         const el = document.createElement('div');
         el.style.width = `${size}px`;
